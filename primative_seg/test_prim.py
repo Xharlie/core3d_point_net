@@ -35,7 +35,7 @@ parser.add_argument('--momentum', type=float, default=0.9, help='Initial learnin
 parser.add_argument('--optimizer', default='adam', help='adam or momentum [default: adam]')
 parser.add_argument('--decay_step', type=int, default=200000, help='Decay step for lr decay [default: 200000]')
 parser.add_argument('--decay_rate', type=float, default=0.7, help='Decay rate for lr decay [default: 0.7]')
-parser.add_argument('--appendix', type=str, default="", help='')
+parser.add_argument('--suffix', type=str, default="", help='')
 
 FLAGS = parser.parse_args()
 
@@ -74,7 +74,7 @@ NUM_CLASSES = 3
 DATA_PATH = os.path.join(ROOT_DIR, 'data', 'primatives')
 print DATA_PATH
 # TRAIN_DATASET = prim_dataset.PrimDataset(root=DATA_PATH, npoints=NUM_POINT, split='train')
-TEST_DATASET = prim_dataset.PrimDataset(root=DATA_PATH, npoints=NUM_POINT, split='test', appendix=FLAGS.appendix)
+TEST_DATASET = prim_dataset.PrimDataset(root=DATA_PATH, npoints=NUM_POINT, split='test', suffix=FLAGS.suffix)
 
 
 def log_string(out_str):
@@ -257,7 +257,7 @@ def visualization(sess, ops):
     for i in range(batch_label[0].shape[0]):
         point_gt[batch_label[0,i]].append(aug_data[0, i, :])
         point_pr[pred_val[0,i]].append(aug_data[0, i, :])
-    drawpc(FLAGS.appendix, point_gt, point_pr)
+    drawpc(FLAGS.suffix, point_gt, point_pr)
 
 if __name__ == "__main__":
     log_string('pid: %s' % (str(os.getpid())))

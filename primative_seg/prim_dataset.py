@@ -7,11 +7,11 @@ import pc_util
 
 
 class PrimDataset():
-    def __init__(self, root, npoints=3500, split='train', appendix=""):
+    def __init__(self, root, npoints=3500, split='train', suffix=""):
         self.npoints = npoints
         self.root = root
         self.split = split
-        self.data_filename = os.path.join(self.root, 'prim_%s%s.pickle' % (split,appendix))
+        self.data_filename = os.path.join(self.root, 'prim_%s%s.pickle' % (split,suffix))
         print "data_filename", self.data_filename
         with open(self.data_filename, 'rb') as fp:
             self.scene_points_list = pickle.load(fp)

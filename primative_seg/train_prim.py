@@ -35,7 +35,7 @@ parser.add_argument('--momentum', type=float, default=0.9, help='Initial learnin
 parser.add_argument('--optimizer', default='adam', help='adam or momentum [default: adam]')
 parser.add_argument('--decay_step', type=int, default=200000, help='Decay step for lr decay [default: 200000]')
 parser.add_argument('--decay_rate', type=float, default=0.7, help='Decay rate for lr decay [default: 0.7]')
-parser.add_argument('--appendix', type=str, default="", help='')
+parser.add_argument('--suffix', type=str, default="", help='')
 FLAGS = parser.parse_args()
 
 EPOCH_CNT = 0
@@ -52,7 +52,7 @@ DECAY_RATE = FLAGS.decay_rate
 
 MODEL = importlib.import_module(FLAGS.model)  # import network module
 MODEL_FILE = os.path.join(BASE_DIR, FLAGS.model + '.py')
-LOG_DIR = FLAGS.log_dir + FLAGS.appendix
+LOG_DIR = FLAGS.log_dir + FLAGS.suffix
 print MODEL_FILE, LOG_DIR
 if not os.path.exists(LOG_DIR): os.mkdir(LOG_DIR)
 os.system('cp %s %s' % (MODEL_FILE, LOG_DIR))  # bkp of model def
@@ -72,9 +72,9 @@ NUM_CLASSES = 3
 # Shapenet official train/test split
 DATA_PATH = os.path.join(ROOT_DIR, 'data', 'primatives')
 print DATA_PATH
-TRAIN_DATASET = prim_dataset.PrimDataset(root=DATA_PATH, npoints=NUM_POINT, split='train',appendix=FLAGS.appendix)
-TEST_DATASET = prim_dataset.PrimDataset(root=DATA_PATH, npoints=NUM_POINT, split='test',appendix=FLAGS.appendix)
-TEST_DATASET_WHOLE_SCENE = prim_dataset.PrimDatasetWholeScene(root=DATA_PATH, npoints=NUM_POINT, split='test',appendix=FLAGS.appendix)
+TRAIN_DATASET = prim_dataset.PrimDataset(root=DATA_PATH, npoints=NUM_POINT, split='train',suffix=FLAGS.suffix)
+TEST_DATASET = prim_dataset.PrimDataset(root=DATA_PATH, npoints=NUM_POINT, split='test', suffix=FLAGS.suffix)
+TEST_DATASET_WHOLE_SCENE = prim_dataset.PrimDatasetWholeScene(root=DATA_PATH, npoints=NUM_POINT, split='test', suffix=FLAGS.suffix)
 
 
 def log_string(out_str):
