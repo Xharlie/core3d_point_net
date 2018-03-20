@@ -3,15 +3,16 @@ import os
 import sys
 import numpy as np
 import pc_util
-import scene_util
+# import scene_util
 
 
-class ScannetDataset():
-    def __init__(self, root, npoints=8192, split='train'):
+class PrimDataset():
+    def __init__(self, root, npoints=3500, split='train', appendix=""):
         self.npoints = npoints
         self.root = root
         self.split = split
-        self.data_filename = os.path.join(self.root, 'scannet_%s.pickle' % (split))
+        self.data_filename = os.path.join(self.root, 'prim_%s%s.pickle' % (split,appendix))
+        print "data_filename", self.data_filename
         with open(self.data_filename, 'rb') as fp:
             self.scene_points_list = pickle.load(fp)
             self.semantic_labels_list = pickle.load(fp)
@@ -65,16 +66,17 @@ class ScannetDataset():
     def __getitem__(self, index):
         point_set = self.scene_points_list[index]
         semantic_seg = self.semantic_labels_list[index].astype(np.int32)
+        # print "semantic_seg.shape", semantic_seg.shape
         coordmax = np.max(point_set, axis=0)
-        print "coordmax", coordmax
+        # print "coordmax", coordmax
         coordmin = np.min(point_set, axis=0)
-        print "coordmin", coordmin
+        # print "coordmin", coordmin
         smpmin = np.maximum(coordmax - [1.5, 1.5, 3.0], coordmin)
         smpmin[2] = coordmin[2]
-        print "smpmin", smpmin
+        # print "smpmin", smpmin
         smpsz = np.minimum(coordmax - smpmin, [1.5, 1.5, 3.0])
         smpsz[2] = coordmax[2] - coordmin[2]
-        print "smpsz", smpsz
+        # print "smpsz", smpsz
         isvalid = False
         for i in range(10):
             curcenter = point_set[np.random.choice(len(semantic_seg), 1)[0], :]
@@ -82,12 +84,12 @@ class ScannetDataset():
             curmax = curcenter + [0.75, 0.75, 1.5]
             curmin[2] = coordmin[2]
             curmax[2] = coordmax[2]
-            print "curcenter, curmin, curmax", curcenter, curmin, curmax
+            # print "curcenter, curmin, curmax", curcenter, curmin, curmax
             curchoice = np.sum((point_set >= (curmin - 0.2)) * (point_set <= (curmax + 0.2)), axis=1) == 3
-            print "point_set >= (curmin - 0.2)", point_set >= (curmin - 0.2)
-            print "point_set >= (curmin - 0.2) * (point_set <= (curmax + 0.2))", \
-                point_set >= (curmin - 0.2) * (point_set <= (curmax + 0.2))
-            print "curchoice",curchoice
+            # print "point_set >= (curmin - 0.2)", point_set >= (curmin - 0.2)
+            # print "point_set >= (curmin - 0.2) * (point_set <= (curmax + 0.2))", \
+                # point_set >= (curmin - 0.2) * (point_set <= (curmax + 0.2))
+            # print "curchoice",curchoice
             cur_point_set = point_set[curchoice, :]
             cur_semantic_seg = semantic_seg[curchoice]
             if len(cur_semantic_seg) == 0:
@@ -111,12 +113,13 @@ class ScannetDataset():
         return len(self.scene_points_list)
 
 
-class ScannetDatasetWholeScene():
-    def __init__(self, root, npoints=8192, split='train'):
+class PrimDatasetWholeScene():
+    def __init__(self, root, npoints=3500, split='train', appendix=""):
         self.npoints = npoints
         self.root = root
         self.split = split
-        self.data_filename = os.path.join(self.root, 'scannet_%s.pickle' % (split))
+        self.data_filename = os.path.join(self.root, 'prim_%s%s.pickle' % (split,appendix))
+        print "data_filename", self.data_filename
         with open(self.data_filename, 'rb') as fp:
             self.scene_points_list = pickle.load(fp)
             self.semantic_labels_list = pickle.load(fp)
@@ -172,58 +175,58 @@ class ScannetDatasetWholeScene():
         return len(self.scene_points_list)
 
 
-class ScannetDatasetVirtualScan():
-    def __init__(self, root, npoints=8192, split='train'):
-        self.npoints = npoints
-        self.root = root
-        self.split = split
-        self.data_filename = os.path.join(self.root, 'scannet_%s.pickle' % (split))
-        with open(self.data_filename, 'rb') as fp:
-            self.scene_points_list = pickle.load(fp)
-            self.semantic_labels_list = pickle.load(fp)
-        if split == 'train':
-            labelweights = np.zeros(21)
-            for seg in self.semantic_labels_list:
-                tmp, _ = np.histogram(seg, range(22))
-                labelweights += tmp
-            labelweights = labelweights.astype(np.float32)
-            labelweights = labelweights / np.sum(labelweights)
-            self.labelweights = 1 / np.log(1.2 + labelweights)
-        elif split == 'test':
-            self.labelweights = np.ones(21)
-
-    def __getitem__(self, index):
-        point_set_ini = self.scene_points_list[index]
-        semantic_seg_ini = self.semantic_labels_list[index].astype(np.int32)
-        sample_weight_ini = self.labelweights[semantic_seg_ini]
-        point_sets = list()
-        semantic_segs = list()
-        sample_weights = list()
-        for i in xrange(8):
-            smpidx = scene_util.virtual_scan(point_set_ini, mode=i)
-            if len(smpidx) < 300:
-                continue
-            point_set = point_set_ini[smpidx, :]
-            semantic_seg = semantic_seg_ini[smpidx]
-            sample_weight = sample_weight_ini[smpidx]
-            choice = np.random.choice(len(semantic_seg), self.npoints, replace=True)
-            point_set = point_set[choice, :]  # Nx3
-            semantic_seg = semantic_seg[choice]  # N
-            sample_weight = sample_weight[choice]  # N
-            point_sets.append(np.expand_dims(point_set, 0))  # 1xNx3
-            semantic_segs.append(np.expand_dims(semantic_seg, 0))  # 1xN
-            sample_weights.append(np.expand_dims(sample_weight, 0))  # 1xN
-        point_sets = np.concatenate(tuple(point_sets), axis=0)
-        semantic_segs = np.concatenate(tuple(semantic_segs), axis=0)
-        sample_weights = np.concatenate(tuple(sample_weights), axis=0)
-        return point_sets, semantic_segs, sample_weights
-
-    def __len__(self):
-        return len(self.scene_points_list)
+# class PrimDatasetVirtualScan():
+#     def __init__(self, root, npoints=8192, split='train'):
+#         self.npoints = npoints
+#         self.root = root
+#         self.split = split
+#         self.data_filename = os.path.join(self.root, 'scannet_%s.pickle' % (split))
+#         with open(self.data_filename, 'rb') as fp:
+#             self.scene_points_list = pickle.load(fp)
+#             self.semantic_labels_list = pickle.load(fp)
+#         if split == 'train':
+#             labelweights = np.zeros(21)
+#             for seg in self.semantic_labels_list:
+#                 tmp, _ = np.histogram(seg, range(22))
+#                 labelweights += tmp
+#             labelweights = labelweights.astype(np.float32)
+#             labelweights = labelweights / np.sum(labelweights)
+#             self.labelweights = 1 / np.log(1.2 + labelweights)
+#         elif split == 'test':
+#             self.labelweights = np.ones(21)
+#
+#     def __getitem__(self, index):
+#         point_set_ini = self.scene_points_list[index]
+#         semantic_seg_ini = self.semantic_labels_list[index].astype(np.int32)
+#         sample_weight_ini = self.labelweights[semantic_seg_ini]
+#         point_sets = list()
+#         semantic_segs = list()
+#         sample_weights = list()
+#         for i in xrange(8):
+#             smpidx = scene_util.virtual_scan(point_set_ini, mode=i)
+#             if len(smpidx) < 300:
+#                 continue
+#             point_set = point_set_ini[smpidx, :]
+#             semantic_seg = semantic_seg_ini[smpidx]
+#             sample_weight = sample_weight_ini[smpidx]
+#             choice = np.random.choice(len(semantic_seg), self.npoints, replace=True)
+#             point_set = point_set[choice, :]  # Nx3
+#             semantic_seg = semantic_seg[choice]  # N
+#             sample_weight = sample_weight[choice]  # N
+#             point_sets.append(np.expand_dims(point_set, 0))  # 1xNx3
+#             semantic_segs.append(np.expand_dims(semantic_seg, 0))  # 1xN
+#             sample_weights.append(np.expand_dims(sample_weight, 0))  # 1xN
+#         point_sets = np.concatenate(tuple(point_sets), axis=0)
+#         semantic_segs = np.concatenate(tuple(semantic_segs), axis=0)
+#         sample_weights = np.concatenate(tuple(sample_weights), axis=0)
+#         return point_sets, semantic_segs, sample_weights
+#
+#     def __len__(self):
+#         return len(self.scene_points_list)
 
 
 if __name__ == '__main__':
-    d = ScannetDatasetWholeScene(root='./data', split='test', npoints=8192)
+    d = PrimDatasetWholeScene(root='./data', split='test', npoints=3500)
     labelweights_vox = np.zeros(21)
     for ii in xrange(len(d)):
         print ii

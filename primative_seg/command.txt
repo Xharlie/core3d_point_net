@@ -1,0 +1,1 @@
+nohup python -u train_prim.py &> prim.info &
